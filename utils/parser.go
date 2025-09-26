@@ -8,7 +8,7 @@ import (
 
 func BodyParse(c *fiber.Ctx, input interface{}) error {
 	if err := c.BodyParser(input); err != nil {
-		log.Println("failed to parse request body:", err)
+		log.Println("[ERROR] failed to parse request body:", err)
 		return err
 	}
 	return nil

@@ -45,16 +45,16 @@ func (r *userRepository) Create(user *models.User) error {
 	// Hashing password
 	user.Password, err = utils.HashPassword(user.Password)
 	if err != nil {
-		log.Printf("Error hashing password: %v", err)
+		log.Printf("[ERROR] Error hashing password: %v", err)
 		return err
 	}
 
 	// Create User and Error Handling
 	if err := r.db.Create(user).Error; err != nil {
-		if strings.Contains(err.Error(), "UNIQUE") || 
-       strings.Contains(err.Error(), "constraint failed") || 
-       strings.Contains(err.Error(), "duplicate") {
-			log.Printf("User with username %s or email %s already exists", user.Username, user.Email)
+		if strings.Contains(err.Error(), "UNIQUE") ||
+			strings.Contains(err.Error(), "constraint failed") ||
+			strings.Contains(err.Error(), "duplicate") {
+			log.Printf("[ERROR] User with username %s or email %s already exists", user.Username, user.Email)
 			return fmt.Errorf("username or email already exists")
 		}
 	}
@@ -68,7 +68,7 @@ func (r *userRepository) GetByID(id uint) (*models.User, error) {
 	var user models.User
 	if err := r.db.First(&user, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("User with id %d not found", id)
+			log.Printf("[ERROR] User with id %d not found", id)
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, err
@@ -83,7 +83,7 @@ func (r *userRepository) GetByUsername(username string) (*models.User, error) {
 	var user models.User
 	if err := r.db.Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("User with username %s not found", username)
+			log.Printf("[ERROR] User with username %s not found", username)
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, err
@@ -98,7 +98,7 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 	var user models.User
 	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("User with email %s not found", email)
+			log.Printf("[ERROR] User with email %s not found", email)
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, err
@@ -119,7 +119,7 @@ func (r *userRepository) Update(id uint, updates map[string]interface{}) error {
 		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate") {
 			return fmt.Errorf("username or email already exists")
 		} else if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("User with id %d not found", id)
+			log.Printf("[ERROR] User with id %d not found", id)
 			return err
 		}
 	}
@@ -133,7 +133,7 @@ func (r *userRepository) DeleteById(id uint) error {
 	var err error
 	if err = r.db.Where("id = ?", id).Delete(&models.User{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("User with id %d not found", id)
+			log.Printf("[ERROR] User with id %d not found", id)
 			return fmt.Errorf("user not found")
 		}
 	}
@@ -147,7 +147,7 @@ func (r *userRepository) DeleteByUsername(username string) error {
 	var err error
 	if err = r.db.Where("username = ?", username).Delete(&models.User{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("User with username %s not found", username)
+			log.Printf("[ERROR] User with username %s not found", username)
 			return fmt.Errorf("user not found")
 		}
 	}

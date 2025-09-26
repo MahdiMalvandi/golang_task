@@ -6,13 +6,14 @@ import (
 	"golang_task/repositories"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
-func FollowRoute(app *fiber.App, db *gorm.DB) {
+func FollowRoute(app *fiber.App, db *gorm.DB, rdb *redis.Client) {
 	follows := app.Group("/follows")
 
-	repo := repositories.NewFollowRepository(db)
+	repo := repositories.NewFollowRepository(db, rdb)
 	
 	follows.Use(middlewares.AuthRequired())
 	follows.Get("/followers", handlers.GetFollowers(repo))

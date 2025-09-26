@@ -28,12 +28,12 @@ func main() {
 	})
 
 	if err != nil {
-		log.Println("Failed to connect to SQLite:", err)
+		log.Println("[ERROR] Failed to connect to SQLite:", err)
 	}
 
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system environment variables")
+		log.Println("[ERROR] No .env file found, using system environment variables")
 	}
 
 	// Fiber App
@@ -50,7 +50,7 @@ func main() {
 
 	routers.UserRoutes(app, db)
 	routers.PostRoute(app, db, rdb)
-	routers.FollowRoute(app, db)
+	routers.FollowRoute(app, db, rdb)
 
 
 	db.AutoMigrate(&models.User{}, &models.Follow{}, &models.Post{})

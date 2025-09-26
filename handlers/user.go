@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
+
 // UserRegisterRequest represents the request body for user registration
 type UserRegisterRequest struct {
 	FirstName string `json:"first_name" example:"John"`
@@ -91,7 +92,6 @@ func RegisterHandler(repo repositories.UserRepositoryInterface) fiber.Handler {
 	}
 }
 
-
 // LoginHandler godoc
 // @Summary Login user
 // @Description Authenticate user using email or username and password, returns JWT
@@ -122,12 +122,12 @@ func LoginHandler(repo repositories.UserRepositoryInterface) fiber.Handler {
 		} else if input.Email != "" {
 			user, getDataErr = repo.GetByEmail(input.Email)
 			if getDataErr != nil {
-				log.Printf("failed to get user by email %s: %v", input.Email, getDataErr)
+				log.Printf("[ERROR] failed to get user by email %s: %v", input.Email, getDataErr)
 			}
 		} else if input.Username != "" {
 			user, getDataErr = repo.GetByUsername(input.Username)
 			if getDataErr != nil {
-				log.Printf("failed to get user by username %s: %v", input.Username, getDataErr)
+				log.Printf("[ERROR] failed to get user by username %s: %v", input.Username, getDataErr)
 			}
 		} else {
 			return c.Status(fiber.StatusBadRequest).JSON(UserErrorResponse{
@@ -144,7 +144,7 @@ func LoginHandler(repo repositories.UserRepositoryInterface) fiber.Handler {
 		}
 
 		if err := utils.CheckPasswordHash(input.Password, user.Password); err != nil {
-			log.Printf("Password is wrong for user %s:%s", user.Username, err)
+			log.Printf("[ERROR] Password is wrong for user %s:%s", user.Username, err)
 			return c.Status(fiber.StatusUnauthorized).JSON(UserErrorResponse{
 				Error:   "unauthorized",
 				Message: "password is wrong",
@@ -159,7 +159,7 @@ func LoginHandler(repo repositories.UserRepositoryInterface) fiber.Handler {
 			})
 		}
 
-		log.Println("User Logged In Successfully username:", user.Username)
+		log.Println("[INFO] User Logged In Successfully username:", user.Username)
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Message: "user logged in successfully",
 			Token:   jwtToken,

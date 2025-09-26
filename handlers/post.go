@@ -5,6 +5,7 @@ import (
 	"golang_task/models"
 	"golang_task/repositories"
 	"golang_task/utils"
+	"log"
 	"os"
 	"slices"
 	"strconv"
@@ -56,58 +57,59 @@ func PostCreate(repo repositories.PostRepositoryInterface) fiber.Handler {
 		// get media file
 		file, err := c.FormFile("media")
 		if err != nil {
-			if strings.Contains(err.Error(), "there is no uploaded file") { // User does not send file
-				input.MediaPath = ""
-			} else {
+			if !strings.Contains(err.Error(), "there is no uploaded file") { // User does not send file
+				log.Printf("[ERROR] Post creation failed for user %d: %v", userID, err)
+
 				return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 					Error:   "failed to create post",
 					Message: err.Error(),
 				})
 			}
 
-		} else { // user send a file
-			// Check file size
-			maxFileSize, err := strconv.ParseUint(os.Getenv("MAX_FILE_SIZE"), 10, 64)
-			if err != nil {
-				// Default file size
-				maxFileSize = 50
-			}
-			if file.Size > int64(maxFileSize*1024*1024) {
-
-				return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
-					Error:   "failed to create post",
-					Message: "file size exceeds 50MB",
-				})
-			}
-
-			// Check Prefixes
-			allowSuffix := []string{"png", "jpg", "jpeg", "gif", "bmp", "webp", "mp4", "mov", "avi", "mkv", "flv", "wmv", "webm"}
-
-			fileNameSplited := strings.Split(file.Filename, ".")
-			fileSuffix := fileNameSplited[len(fileNameSplited)-1]
-			if !slices.Contains(allowSuffix, fileSuffix) {
-
-				return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
-					Error:   "failed to create post",
-					Message: "invalid file type",
-				})
-			}
-
-			// Uploading file
-			filename := strings.ReplaceAll(fmt.Sprintf("%d_%d_%s", time.Now().Unix(), userID, file.Filename), " ", "-")
-
-			path := fmt.Sprintf("./uploads/%s", filename)
-
-			if err := c.SaveFile(file, path); err != nil {
-				return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
-					Error:   "failed to create post",
-					Message: err.Error(),
-				})
-			}
-			input.MediaPath = path
 		}
 
+		// Check file size
+		maxFileSize, err := strconv.ParseUint(os.Getenv("MAX_FILE_SIZE"), 10, 64)
+		if err != nil {
+			// Default file size
+			maxFileSize = 50
+		}
+		if file.Size > int64(maxFileSize*1024*1024) {
+
+			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+				Error:   "failed to create post",
+				Message: "file size exceeds 50MB",
+			})
+		}
+
+		// Check Prefixes
+		allowSuffix := []string{"png", "jpg", "jpeg", "gif", "bmp", "webp", "mp4", "mov", "avi", "mkv", "flv", "wmv", "webm"}
+
+		fileNameSplited := strings.Split(file.Filename, ".")
+		fileSuffix := fileNameSplited[len(fileNameSplited)-1]
+		if !slices.Contains(allowSuffix, fileSuffix) {
+
+			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+				Error:   "failed to create post",
+				Message: "invalid file type",
+			})
+		}
+
+		// Uploading file
+		filename := strings.ReplaceAll(fmt.Sprintf("%d_%d_%s", time.Now().Unix(), userID, file.Filename), " ", "-")
+
+		path := fmt.Sprintf("./uploads/%s", filename)
+
+		if err := c.SaveFile(file, path); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+				Error:   "failed to create post",
+				Message: err.Error(),
+			})
+		}
+		input.MediaPath = path
+
 		if err := utils.BodyParse(c, &input); err != nil {
+			log.Printf("[ERROR] Post creation failed for user %d: %v", userID, err)
 			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 				Error:   "failed to create post",
 				Message: err.Error(),
@@ -121,12 +123,15 @@ func PostCreate(repo repositories.PostRepositoryInterface) fiber.Handler {
 			MediaPath: input.MediaPath,
 			AuthorID:  input.AuthorID,
 		}
+		log.Printf("[INFO] User %d is creating a post with title: %s", userID, input.Title)
 		if err := repo.Create(&post); err != nil {
+			log.Printf("[ERROR] Post creation failed for user %d: %v", userID, err)
 			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 				Error:   "failed to create post",
 				Message: err.Error(),
 			})
 		}
+		log.Printf("[INFO] Post created successfully by user %d: post_id=%d", userID, post.ID)
 
 		return c.Status(fiber.StatusCreated).JSON(PostSuccessfullResponse{
 			Message: "post created successfully",
@@ -155,11 +160,13 @@ func PostTimeline(repo repositories.PostRepositoryInterface) fiber.Handler {
 		end := start + (limit) - 1
 		posts, err := repo.GetTimeline(userID, int64(start), int64(end))
 		if err != nil {
+			log.Printf("[ERROR] Failed to get timeline for user %d: %v", userID, err)
 			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 				Error:   "failed to see timeline",
 				Message: err.Error(),
 			})
 		}
+		log.Printf("[INFO] User %d is fetching timeline page %d with limit %d", userID, page, limit)
 
 		return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 			"posts": posts,
@@ -216,9 +223,14 @@ func PostGetByID(repo repositories.PostRepositoryInterface) fiber.Handler {
 func DeletePost(repo repositories.PostRepositoryInterface) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
+		// get user id from context
+		userID := c.Locals("user_id").(uint)
+
 		// Get Post id
 		postIdParams, err := strconv.ParseUint(c.Params("id"), 10, 64)
 		if err != nil {
+			log.Printf("[ERROR] Failed to delete a post by user %d: %v", userID, err)
+
 			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 				Error:   "failed to delete post",
 				Message: "invalid post id",
@@ -228,24 +240,24 @@ func DeletePost(repo repositories.PostRepositoryInterface) fiber.Handler {
 		// get post from db
 		post, err := repo.GetByID(uint(postIdParams))
 		if err != nil {
+			log.Printf("[ERROR] Failed to delete by user %d: %s", userID, err.Error())
+
 			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 				Error:   "failed to delete post",
 				Message: err.Error(),
 			})
 		}
-
-		// get user id from context
-		userID := c.Locals("user_id").(uint)
-
 
 		err = repo.DeletePost(post, uint(userID))
 		if err != nil {
+			log.Printf("[ERROR] Failed to delete post_id=%d by user %d: %v", post.ID, userID, err)
 			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 				Error:   "failed to delete post",
 				Message: err.Error(),
 			})
 		}
 
+		log.Printf("[INFO] Post deleted successfully post_id=%d by user %d", post.ID, userID)
 		return c.JSON(PostSuccessfullResponse{
 			Message: "post deleted successfully",
 		})
@@ -280,8 +292,9 @@ func PostEdit(repo repositories.PostRepositoryInterface) fiber.Handler {
 		// Get Post id
 		postIdParams, err := strconv.ParseUint(c.Params("id"), 10, 64)
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "invalid post id",
+			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+				Error:   "failed to update post",
+				Message: err.Error(),
 			})
 		}
 
@@ -334,7 +347,10 @@ func PostEdit(repo repositories.PostRepositoryInterface) fiber.Handler {
 			path := fmt.Sprintf("./uploads/%s", filename)
 
 			if err := c.SaveFile(file, path); err != nil {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "failed to save file", "message": err.Error()})
+				return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+					Error:   "failed to update post",
+					Message: err.Error(),
+				})
 			}
 			input.MediaPath = path
 
@@ -357,8 +373,10 @@ func PostEdit(repo repositories.PostRepositoryInterface) fiber.Handler {
 				Message: err.Error(),
 			})
 		}
-
+		log.Printf("[INFO] User %d is editing post_id=%d", userID, post.ID)
 		if err := repo.UpdatePost(post, userID, input); err != nil {
+			log.Printf("[ERROR] [ERROR]Failed to update post_id=%d by user %d: %v", post.ID, userID, err)
+
 			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 				Error:   "failed to update post",
 				Message: err.Error(),
@@ -366,6 +384,7 @@ func PostEdit(repo repositories.PostRepositoryInterface) fiber.Handler {
 
 		}
 
+		log.Printf("[INFO] Post updated successfully post_id=%d by user %d", post.ID, userID)
 		return c.Status(fiber.StatusCreated).JSON(PostSuccessfullResponse{
 			Message: "post updated successfully",
 		})

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"strconv"
 
 	"golang_task/models"
@@ -35,13 +36,16 @@ type FollowErrorResponse struct {
 func GetFollowers(repo repositories.FollowRepositoryInterface) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		userID := c.Locals("user_id").(uint)
+		log.Printf("[INFO] User %d is fetching followers", userID)
 		followers, err := repo.GetFollowers(userID)
 		if err != nil {
+			log.Printf("[ERROR] Failed to get followers for user %d: %v", userID, err)
 			return c.Status(fiber.StatusBadRequest).JSON(FollowErrorResponse{
 				Error:   "failed to get followers",
 				Message: err.Error(),
 			})
 		}
+		log.Printf("[INFO] User %d followers fetched successfully, count=%d", userID, len(followers))
 		return c.Status(fiber.StatusOK).JSON(followers)
 	}
 }
@@ -57,8 +61,11 @@ func GetFollowers(repo repositories.FollowRepositoryInterface) fiber.Handler {
 func GetFollowing(repo repositories.FollowRepositoryInterface) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		userID := c.Locals("user_id").(uint)
+		log.Printf("[INFO] User %d is fetching followings", userID)
+
 		following, err := repo.GetFollowings(userID)
 		if err != nil {
+			log.Printf("[ERROR] [ERROR][ERROR] Failed to get followings for user %d: %v", userID, err)
 			return c.Status(fiber.StatusBadRequest).JSON(FollowErrorResponse{
 				Error:   "failed to get following",
 				Message: err.Error(),
@@ -67,6 +74,8 @@ func GetFollowing(repo repositories.FollowRepositoryInterface) fiber.Handler {
 		if len(following) == 0 {
 			following = []models.User{}
 		}
+		log.Printf("[INFO] User %d followings fetched successfully, count=%d", userID, len(following))
+
 		return c.Status(fiber.StatusOK).JSON(following)
 	}
 }
@@ -94,8 +103,9 @@ func Follow(repo repositories.FollowRepositoryInterface) fiber.Handler {
 			})
 		}
 		followingId := uint(followingId64)
-
+		log.Printf("[INFO] User %d is trying to follow user %d", userID, followingId)
 		if userID == followingId {
+			log.Printf("[ERROR] User %d tried to follow themselves", userID)
 			return c.Status(fiber.StatusBadRequest).JSON(FollowErrorResponse{
 				Error:   "cannot follow yourself",
 				Message: "you cannot follow yourself",
@@ -103,6 +113,8 @@ func Follow(repo repositories.FollowRepositoryInterface) fiber.Handler {
 		}
 
 		if err := repo.Follow(userID, followingId); err != nil {
+			log.Printf("[ERROR] User %d failed to follow user %d: %v", userID, followingId, err)
+
 			var statusCode int
 			if err.Error() == "following user not found" {
 				statusCode = fiber.StatusNotFound
@@ -114,7 +126,7 @@ func Follow(repo repositories.FollowRepositoryInterface) fiber.Handler {
 				Message: err.Error(),
 			})
 		}
-
+		log.Printf("[INFO] User %d followed user %d successfully", userID, followingId)
 		return c.Status(fiber.StatusOK).JSON(FollowResponse{
 			Message: "followed successfully",
 		})
@@ -144,8 +156,10 @@ func Unfollow(repo repositories.FollowRepositoryInterface) fiber.Handler {
 			})
 		}
 		followingId := uint(followingId64)
+		log.Printf("[INFO] User %d is trying to unfollow user %d", userID, followingId)
 
 		if userID == followingId {
+			log.Printf("[ERROR] User %d tried to unfollow themselves", userID)
 			return c.Status(fiber.StatusBadRequest).JSON(FollowErrorResponse{
 				Error:   "cannot unfollow yourself",
 				Message: "you cannot unfollow yourself",
@@ -153,12 +167,15 @@ func Unfollow(repo repositories.FollowRepositoryInterface) fiber.Handler {
 		}
 
 		if err := repo.UnFollow(userID, followingId); err != nil {
+			log.Printf("[ERROR] User %d failed to unfollow user %d: %v", userID, followingId, err)
+
 			return c.Status(fiber.StatusBadRequest).JSON(FollowErrorResponse{
 				Error:   "failed to unfollow",
 				Message: err.Error(),
 			})
 		}
 
+		log.Printf("[INFO] User %d unfollowed user %d successfully", userID, followingId)
 		return c.Status(fiber.StatusOK).JSON(UnfollowResponse{
 			Message: "unfollowed successfully",
 		})
