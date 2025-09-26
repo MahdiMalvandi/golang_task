@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
+	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -21,6 +22,9 @@ import (
 // @version 1.0
 // @description This API allows authenticated users to create, edit, delete posts and view their timeline.\n All endpoints require login and a valid JWT token provided in the `Authorization` header as `Bearer <token>`.\n The timeline endpoint supports pagination and retrieves posts from Redis cache for fast access. \n Fan-out worker ensures that newly created posts are propagated to followers' timelines automatically.\n
 func main() {
+	   if err := godotenv.Load(); err != nil {
+        log.Fatalf("Error loading .env file")
+    }
 	if _, err := os.Stat("./uploads"); os.IsNotExist(err) {
 		err := os.Mkdir("./uploads", os.ModePerm)
 		if err != nil {

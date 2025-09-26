@@ -52,7 +52,7 @@ type UserErrorResponse struct {
 // @Param input body UserRegisterRequest true "User registration info"
 // @Success 201 {object} UserRegisterResponse "User created successfully"
 // @Failure 400 {object} ErrorResponse "Failed to create user"
-// @Router /register [post]
+// @Router /users/register [post]
 func RegisterHandler(repo repositories.UserRepositoryInterface) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var input UserRegisterRequest
@@ -103,7 +103,7 @@ func RegisterHandler(repo repositories.UserRepositoryInterface) fiber.Handler {
 // @Failure 400 {object} UserErrorResponse "Validation Error."
 // @Failure 401 {object} UserErrorResponse "Password is wrong"
 // @Failure 404 {object} UserErrorResponse "User not found"
-// @Router /auth/login [post]
+// @Router /users/login [post]
 func LoginHandler(repo repositories.UserRepositoryInterface) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var input UserLoginRequest

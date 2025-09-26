@@ -132,42 +132,6 @@ info:
   title: Social Media API
   version: "1.0"
 paths:
-  /auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticate user using email or username and password, returns
-        JWT
-      parameters:
-      - description: 'User Login Data.  NOTE: Send either username or email for login,
-          but do not provide both at the same time.'
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.UserLoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: User Logged in successfully
-          schema:
-            $ref: '#/definitions/handlers.UserLoginResponse'
-        "400":
-          description: Validation Error.
-          schema:
-            $ref: '#/definitions/handlers.UserErrorResponse'
-        "401":
-          description: Password is wrong
-          schema:
-            $ref: '#/definitions/handlers.UserErrorResponse'
-        "404":
-          description: User not found
-          schema:
-            $ref: '#/definitions/handlers.UserErrorResponse'
-      summary: Login user
-      tags:
-      - Auth
   /follows/{following_id}:
     delete:
       consumes:
@@ -409,32 +373,6 @@ paths:
       summary: Edit a post
       tags:
       - Posts
-  /register:
-    post:
-      consumes:
-      - application/json
-      description: Register a new user and return JWT token
-      parameters:
-      - description: User registration info
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.UserRegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: User created successfully
-          schema:
-            $ref: '#/definitions/handlers.UserRegisterResponse'
-        "400":
-          description: Failed to create user
-          schema:
-            $ref: '#/definitions/handlers.ErrorResponse'
-      summary: Register a new user
-      tags:
-      - Auth
   /timeline/{limit}/{page}:
     get:
       description: Get posts from user's followings with pagination
@@ -467,4 +405,66 @@ paths:
       summary: Get user's timeline posts
       tags:
       - Posts
+  /users/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user using email or username and password, returns
+        JWT
+      parameters:
+      - description: 'User Login Data.  NOTE: Send either username or email for login,
+          but do not provide both at the same time.'
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User Logged in successfully
+          schema:
+            $ref: '#/definitions/handlers.UserLoginResponse'
+        "400":
+          description: Validation Error.
+          schema:
+            $ref: '#/definitions/handlers.UserErrorResponse'
+        "401":
+          description: Password is wrong
+          schema:
+            $ref: '#/definitions/handlers.UserErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/handlers.UserErrorResponse'
+      summary: Login user
+      tags:
+      - Auth
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user and return JWT token
+      parameters:
+      - description: User registration info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UserRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/handlers.UserRegisterResponse'
+        "400":
+          description: Failed to create user
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Auth
 swagger: "2.0"

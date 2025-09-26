@@ -15,58 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth/login": {
-            "post": {
-                "description": "Authenticate user using email or username and password, returns JWT",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Login user",
-                "parameters": [
-                    {
-                        "description": "User Login Data.  NOTE: Send either username or email for login, but do not provide both at the same time.",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserLoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "User Logged in successfully",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserLoginResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Validation Error.",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Password is wrong",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "User not found",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/follows/followers": {
             "get": {
                 "security": [
@@ -438,46 +386,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/register": {
-            "post": {
-                "description": "Register a new user and return JWT token",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Register a new user",
-                "parameters": [
-                    {
-                        "description": "User registration info",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserRegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "User created successfully",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.UserRegisterResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Failed to create user",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/timeline/{limit}/{page}": {
             "get": {
                 "security": [
@@ -521,6 +429,98 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/login": {
+            "post": {
+                "description": "Authenticate user using email or username and password, returns JWT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "User Login Data.  NOTE: Send either username or email for login, but do not provide both at the same time.",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User Logged in successfully",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserLoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Validation Error.",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Password is wrong",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/register": {
+            "post": {
+                "description": "Register a new user and return JWT token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "User registration info",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserRegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UserRegisterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Failed to create user",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }

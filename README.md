@@ -50,6 +50,7 @@ CREATE DATABASE new_database_name;
 
 اگر از Docker استفاده می‌کنید، در فایل <code>.env</code> به جای <code>localhost</code>، باید اطلاعات کانتینر Docker خود را وارد کنید:
 
+
 <ul> <li><code>DB_HOST=mysql_db</code> (نام کانتینر MySQL شما)</li> <li><code>DB_USER=root</code></li> <li><code>DB_PASSWORD=1234</code></li> <li><code>DB_NAME=new_database_name</code> (نام دیتابی که ساختید)</li> </ul>
 <h2>راه‌اندازی Redis:</h2>
 
