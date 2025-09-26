@@ -91,7 +91,7 @@ go run main.go
 
 پس از راه‌اندازی سرور، می‌توانید به مستندات Swagger API از طریق مسیر زیر دسترسی پیدا کنید:
 ```bash
-http://localhost:3000/swagger/index.html
+http://localhost:3001/swagger/index.html
 ```
 
 در این صفحه، شما می‌توانید تمامی عملیات‌ها و متدهای موجود API را مشاهده کنید.

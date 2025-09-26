@@ -72,5 +72,5 @@ rdb := redis.NewClient(&redis.Options{
 
 	db.AutoMigrate(&models.User{}, &models.Follow{}, &models.Post{})
 	
-	log.Println(app.Listen(":3000"))
+	log.Println(app.Listen(":3001"))
 }
