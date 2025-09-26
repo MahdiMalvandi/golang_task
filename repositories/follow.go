@@ -57,7 +57,7 @@ func (r *followRepository) Follow(followerID, followingID uint) error {
 	if err := r.db.Create(&followObject).Error; err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") ||
 			strings.Contains(err.Error(), "constraint failed") ||
-			strings.Contains(err.Error(), "duplicate") {
+			strings.Contains(err.Error(), "Duplicate") {
 			log.Printf("[ERROR] User %d already followed user %d", followerID, followingID)
 
 			return fmt.Errorf("you have already followed this user")

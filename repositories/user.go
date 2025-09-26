@@ -53,11 +53,13 @@ func (r *userRepository) Create(user *models.User) error {
 	if err := r.db.Create(user).Error; err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") ||
 			strings.Contains(err.Error(), "constraint failed") ||
-			strings.Contains(err.Error(), "duplicate") {
+			strings.Contains(err.Error(), "Duplicate") {
 			log.Printf("[ERROR] User with username %s or email %s already exists", user.Username, user.Email)
 			return fmt.Errorf("username or email already exists")
 		}
+		return err
 	}
+
 	return err
 }
 
@@ -116,7 +118,7 @@ func (r *userRepository) Update(id uint, updates map[string]interface{}) error {
 		ID: id,
 	}
 	if err = r.db.Model(&user).Updates(updates).Error; err != nil {
-		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate") {
+		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "Duplicate") {
 			return fmt.Errorf("username or email already exists")
 		} else if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Printf("[ERROR] User with id %d not found", id)

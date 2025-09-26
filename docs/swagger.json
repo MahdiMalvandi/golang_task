@@ -480,7 +480,7 @@
                 }
             }
         },
-        "/users/register": {
+        "/users/signup": {
             "post": {
                 "description": "Register a new user and return JWT token",
                 "consumes": [
