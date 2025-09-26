@@ -10,8 +10,10 @@ import (
 
 func UserRoutes(app *fiber.App, db *gorm.DB) {
 	users := app.Group("/users")
+	
 	repo := repositories.NewUserRepository(db)
+
 	users.Post("/signup", handlers.RegisterHandler(repo))
 	users.Post("/login", handlers.LoginHandler(repo))
-	_ = users
+
 }

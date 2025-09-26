@@ -1,0 +1,470 @@
+definitions:
+  handlers.ErrorResponse:
+    properties:
+      error:
+        example: failed to create post
+        type: string
+      message:
+        example: error message
+        type: string
+    type: object
+  handlers.FollowErrorResponse:
+    properties:
+      error:
+        example: error
+        type: string
+      message:
+        example: error message
+        type: string
+    type: object
+  handlers.FollowResponse:
+    properties:
+      message:
+        example: followed successfully
+        type: string
+    type: object
+  handlers.PostSuccessfullResponse:
+    properties:
+      message:
+        example: operation was successfully
+        type: string
+    type: object
+  handlers.UserErrorResponse:
+    properties:
+      error:
+        example: failed to create user
+        type: string
+      message:
+        example: detailed error message
+        type: string
+    type: object
+  handlers.UserLoginRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+      username:
+        example: johndoe
+        type: string
+    type: object
+  handlers.UserLoginResponse:
+    properties:
+      message:
+        example: user logged in successfully
+        type: string
+      token:
+        example: jwt_token_string
+        type: string
+    type: object
+  handlers.UserRegisterRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      first_name:
+        example: John
+        type: string
+      last_name:
+        example: Doe
+        type: string
+      password:
+        example: password123
+        type: string
+      username:
+        example: johndoe
+        type: string
+    type: object
+  handlers.UserRegisterResponse:
+    properties:
+      message:
+        example: user created successfully
+        type: string
+      token:
+        example: jwt_token_string
+        type: string
+    type: object
+  models.Post:
+    properties:
+      author:
+        $ref: '#/definitions/models.User'
+      author_id:
+        type: integer
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      media_path:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      firstname:
+        type: string
+      id:
+        type: integer
+      lastname:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This API allows authenticated users to create, edit, delete posts and
+    view their timeline.\n All endpoints require login and a valid JWT token provided
+    in the `Authorization` header as `Bearer <token>`.\n The timeline endpoint supports
+    pagination and retrieves posts from Redis cache for fast access. \n Fan-out worker
+    ensures that newly created posts are propagated to followers' timelines automatically.\n
+  title: Social Media API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user using email or username and password, returns
+        JWT
+      parameters:
+      - description: 'User Login Data.  NOTE: Send either username or email for login,
+          but do not provide both at the same time.'
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User Logged in successfully
+          schema:
+            $ref: '#/definitions/handlers.UserLoginResponse'
+        "400":
+          description: Validation Error.
+          schema:
+            $ref: '#/definitions/handlers.UserErrorResponse'
+        "401":
+          description: Password is wrong
+          schema:
+            $ref: '#/definitions/handlers.UserErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/handlers.UserErrorResponse'
+      summary: Login user
+      tags:
+      - Auth
+  /follows/{following_id}:
+    delete:
+      consumes:
+      - application/json
+      description: UnFollow another user. User cannot Unfollow themselves and following
+        must exist.
+      parameters:
+      - description: ID of the user to unfollow
+        in: path
+        name: following_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: unfollowed successfully
+          schema:
+            $ref: '#/definitions/handlers.FollowResponse'
+        "400":
+          description: validation error or user not found or trying to unfollow yourself
+          schema:
+            $ref: '#/definitions/handlers.FollowErrorResponse'
+        "404":
+          description: following not found
+          schema:
+            $ref: '#/definitions/handlers.FollowErrorResponse'
+      summary: Follow a user
+      tags:
+      - Follow
+    post:
+      consumes:
+      - application/json
+      description: Follow another user. User cannot follow themselves and following
+        must exist.
+      parameters:
+      - description: ID of the user to follow
+        in: path
+        name: following_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: followed successfully
+          schema:
+            $ref: '#/definitions/handlers.FollowResponse'
+        "400":
+          description: validation error or user not found or trying to follow yourself
+          schema:
+            $ref: '#/definitions/handlers.FollowErrorResponse'
+        "404":
+          description: follower not found
+          schema:
+            $ref: '#/definitions/handlers.FollowErrorResponse'
+      summary: Follow a user
+      tags:
+      - Follow
+  /follows/followers:
+    get:
+      description: Get all followers of the authenticated user
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.FollowErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get followers
+      tags:
+      - Follow
+  /follows/following:
+    get:
+      description: Get all users the authenticated user is following
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.FollowErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get following
+      tags:
+      - Follow
+  /posts:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new post with optional media file .User must be logged
+        in and provide a valid token.
+      parameters:
+      - description: Post title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Post content
+        in: formData
+        name: content
+        required: true
+        type: string
+      - description: Media file (image/video)
+        in: formData
+        name: media
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Post created successfully
+          schema:
+            $ref: '#/definitions/handlers.PostSuccessfullResponse'
+        "400":
+          description: Bad request or validation error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new post
+      tags:
+      - Posts
+  /posts/{id}:
+    delete:
+      description: Delete a post by ID (only author can delete)
+      parameters:
+      - description: Post ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Post deleted successfully
+          schema:
+            $ref: '#/definitions/handlers.PostSuccessfullResponse'
+        "400":
+          description: Invalid post id
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: 'Forbidden: not the author'
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Post not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete a post
+      tags:
+      - Posts
+    get:
+      description: Get a single post by its ID
+      parameters:
+      - description: Post ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Post'
+        "400":
+          description: Invalid post id
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Post not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get post by ID
+      tags:
+      - Posts
+    put:
+      consumes:
+      - multipart/form-data
+      description: Edit a post's title, content, or media (only author can edit)
+      parameters:
+      - description: Post ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Post title
+        in: formData
+        name: title
+        type: string
+      - description: Post content
+        in: formData
+        name: content
+        type: string
+      - description: Media file
+        in: formData
+        name: media
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Post updated successfully
+          schema:
+            $ref: '#/definitions/handlers.PostSuccessfullResponse'
+        "400":
+          description: Bad request or validation error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: 'Forbidden: not the author'
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Post not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Edit a post
+      tags:
+      - Posts
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user and return JWT token
+      parameters:
+      - description: User registration info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UserRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/handlers.UserRegisterResponse'
+        "400":
+          description: Failed to create user
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Auth
+  /timeline/{limit}/{page}:
+    get:
+      description: Get posts from user's followings with pagination
+      parameters:
+      - description: Number of posts per page
+        in: path
+        name: limit
+        required: true
+        type: integer
+      - description: Page number
+        in: path
+        name: page
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            items:
+              $ref: '#/definitions/models.Post'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get user's timeline posts
+      tags:
+      - Posts
+swagger: "2.0"

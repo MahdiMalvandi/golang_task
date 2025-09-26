@@ -28,7 +28,6 @@ type followRepository struct {
 func NewFollowRepository(db *gorm.DB) FollowRepositoryInterface {
 	return &followRepository{
 		db: db,
-
 	}
 }
 
@@ -40,11 +39,14 @@ func (r *followRepository) Follow(followerID, followingID uint) error {
 		FollowerID:  followerID,
 		FollowingID: followingID,
 	}
-    var following models.User
-	    if err := r.db.First(&following, followObject.FollowingID).Error; err != nil {
-        return fmt.Errorf("following user not found")
-    }
-	
+
+	// Get following from db and check if it exists
+	var following models.User
+	if err := r.db.First(&following, followObject.FollowingID).Error; err != nil {
+		return fmt.Errorf("following user not found")
+	}
+
+	// Check follow situation
 	if err := r.db.Create(&followObject).Error; err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") ||
 			strings.Contains(err.Error(), "constraint failed") ||
@@ -63,18 +65,22 @@ func (r *followRepository) UnFollow(followerID, followingID uint) error {
 		FollowerID:  followerID,
 		FollowingID: followingID,
 	}
-    var following models.User
 
-    if err := r.db.First(&following, followObject.FollowingID).Error; err != nil {
-        return fmt.Errorf("following user not found")
-    }
-	
+	// Get following from db
+	var following models.User
+
+	if err := r.db.First(&following, followObject.FollowingID).Error; err != nil {
+		return fmt.Errorf("following user not found")
+	}
+
+	// Checking if the user is following the user with id followingID 
 	result := r.db.Where("follower_id = ? AND following_id = ? ", followObject.FollowerID, followObject.FollowingID).Delete(&models.Follow{})
-	if result.RowsAffected == 0{
+	if result.RowsAffected == 0 {
 		return fmt.Errorf("you have not followed this user")
 	}
 	return result.Error
 }
+
 
 func (r *followRepository) IsFollowing(followerID, followingID uint) (bool, error) {
 	var followObject models.Follow
@@ -87,6 +93,8 @@ func (r *followRepository) IsFollowing(followerID, followingID uint) (bool, erro
 	return true, nil
 }
 
+
+// This function get the user's followers
 func (r *followRepository) GetFollowers(followingID uint) ([]models.User, error) {
 	var followers []models.User
 	if err := r.db.Model(&models.Follow{}).Select("users.*").
@@ -99,6 +107,7 @@ func (r *followRepository) GetFollowers(followingID uint) ([]models.User, error)
 	return followers, nil
 }
 
+// This function get the user's followings
 func (r *followRepository) GetFollowings(followerID uint) ([]models.User, error) {
 	var followings []models.User
 	if err := r.db.Model(&models.Follow{}).Select("users.*").

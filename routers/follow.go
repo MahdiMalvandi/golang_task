@@ -11,7 +11,9 @@ import (
 
 func FollowRoute(app *fiber.App, db *gorm.DB) {
 	follows := app.Group("/follows")
+
 	repo := repositories.NewFollowRepository(db)
+	
 	follows.Use(middlewares.AuthRequired())
 	follows.Get("/followers", handlers.GetFollowers(repo))
 	follows.Get("/followings", handlers.GetFollowing(repo))

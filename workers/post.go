@@ -10,33 +10,39 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
-
-func StartWorker(rdb *redis.Client, db *gorm.DB) {
+// This Function Gets Posts from queue and Adds to Author's Followers timeline
+func FanOutWorker(rdb *redis.Client, db *gorm.DB) {
 	ctx := context.Background()
 	queueKey := "post_queue"
-	followRepo := repositories.NewFollowRepository(db)
-	fmt.Println("worker started")
-	_ = followRepo
-	for {
-		fmt.Println("worker starts to work")
 
+	// Create follow repository
+	followRepo := repositories.NewFollowRepository(db)
+
+	for {
+		// Listen to queue
 		result, err := rdb.BLPop(ctx, 0*time.Second, queueKey).Result()
 		if err != nil {
 			fmt.Printf("Worker error: %v\n", err)
 			continue
 		}
-		var resultMap map[string]uint
+		var resultMap struct {
+			PostID   uint `json:"post_id"`
+			AuthorID uint `json:"author_id"`
+			Created  int64 `json:"created_at"` 
+		}
 		json.Unmarshal([]byte(result[1]), &resultMap)
 
-		authorFollowers, err := followRepo.GetFollowers(resultMap["author_id"])
+		// Get Author's followers
+		authorFollowers, err := followRepo.GetFollowers(resultMap.AuthorID)
 
 		if err != nil {
 			fmt.Printf("Worker error: %v\n", err)
 			continue
 		}
 
+		// Add posts to Author's followers timeline
 		for _, follower := range authorFollowers {
-			err := rdb.ZAdd(ctx, fmt.Sprintf("timeline:%d", follower.ID), redis.Z{Score: float64(time.Now().Unix()), Member: resultMap["post_id"]}).Err()
+			err := rdb.ZAdd(ctx, fmt.Sprintf("timeline:%d", follower.ID), redis.Z{Score: float64(resultMap.Created), Member: resultMap.PostID}).Err()
 			if err != nil {
 				fmt.Printf("Worker error: %v\n", err)
 				continue

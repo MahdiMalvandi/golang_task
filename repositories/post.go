@@ -21,9 +21,10 @@ type PostRepositoryInterface interface {
 	GetPostsByIDs(postIds []uint) ([]models.Post, error)
 	GetByAuthorID(authorID uint, limit, offset int) ([]models.Post, error)
 	GetByAuthorUsername(username string, limit, offset int) ([]models.Post, error)
-	Update(id uint, updates interface{}) error
-	DeleteByID(id uint) error
+	UpdatePost(post *models.Post ,userID uint, updates interface{}) error
+	DeletePost(post *models.Post ,userID uint) error
 	GetTimeline(userID uint, start, end int64) ([]models.Post, error)
+	GetFollowingsPosts(userID uint, start, end int64) ([]models.Post, error)
 }
 
 // Post repository struct
@@ -50,6 +51,8 @@ func (r *postRepository) Create(post *models.Post) error {
 	if err = r.db.Create(post).Error; err != nil {
 		return err
 	}
+
+	// Send post id and author id to queue to add in followers timeline
 	queueKey := "post_queue"
 	data, _ := json.Marshal(map[string]uint{
 		"post_id":   post.ID,
@@ -58,6 +61,7 @@ func (r *postRepository) Create(post *models.Post) error {
 
 	r.rdb.RPush(context.Background(), queueKey, data)
 
+	
 	return nil
 }
 
@@ -80,8 +84,8 @@ func (r *postRepository) GetByID(id uint) (*models.Post, error) {
 //
 // If the error is nil, the posts were retrieved successfully.
 func (r *postRepository) GetPostsByIDs(postIds []uint) ([]models.Post, error) {
-		if len(postIds) == 0 {
-		return []models.Post{}, nil 
+	if len(postIds) == 0 {
+		return []models.Post{}, nil
 	}
 	var posts []models.Post
 	if err := r.db.Preload("Author").Find(&posts, postIds).Error; err != nil {
@@ -127,37 +131,87 @@ func (r *postRepository) GetByAuthorUsername(username string, limit, offset int)
 // This method updates a post
 //
 // If the error is nil, the post was updated successfully.
-func (r *postRepository) Update(id uint, updates interface{}) error {
-	var err error
+func (r *postRepository) UpdatePost(post *models.Post, userID uint, updates interface{}) error {
 
-	if err = r.db.Model(&models.Post{}).Where("id = ?", id).Updates(updates).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("Post with id %d not found or you are not the author", id)
-			return err
-		}
+	if post.AuthorID != userID {
+		return fmt.Errorf("you are not the author of this post")
 	}
-	return err
+
+	if err := r.db.Model(post).Updates(updates).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // This method deletes a post
 //
 // If the error is nil, the post was deleted successfully.
-func (r *postRepository) DeleteByID(id uint) error {
-	var err error
-	if err = r.db.Where("id = ?", id).Delete(&models.Post{}).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Printf("Post with id %d not found", id)
-			return fmt.Errorf("post not found")
-		}
+func (r *postRepository) DeletePost(post *models.Post, userID uint) error {
+
+	if post.AuthorID != userID {
+		return fmt.Errorf("you are not the author of this post")
 	}
-	return err
+
+	if err := r.db.Delete(post).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (r *postRepository) GetTimeline(userID uint, start, end int64) (posts []models.Post, err error) {
+
+func (r *postRepository) GetFollowingsPosts(userID uint, start, end int64) (posts []models.Post, err error) {
+	fmt.Println("got from database")
+	followRepo := NewFollowRepository(r.db)
+	followings, err := followRepo.GetFollowings(userID)
+	if err != nil {
+		return posts, err
+	}
+	if len(followings) == 0 {
+		return []models.Post{}, nil
+	}
+	followingIDs := make([]uint, 0, len(followings))
+
+	for _, f := range followings {
+		followingIDs = append(followingIDs, f.ID)
+	}
+
+	limit := int(end - start + 1)
+	page := int((int(start) / limit) + 1)
+	if err := r.db.Preload("Author").
+		Where("author_id IN ?", followingIDs).
+		Order("created_at DESC").
+		Offset((page - 1) * limit).Limit(limit).Find(&posts).Error; err != nil {
+		return posts, err
+	}
+	return posts, nil
+}
+
+func (r *postRepository) GetTimeline(userID uint, start, end int64) ([]models.Post, error) {
+	var posts []models.Post
 	ctx := context.Background()
-	result, err := r.rdb.ZRevRange(ctx, fmt.Sprintf("timeline:%d", userID), start, end).Result()
+	key := fmt.Sprintf("timeline:%d", userID)
+	result, err := r.rdb.ZRevRange(ctx, key, start, end).Result()
 	if err != nil {
 		return posts, fmt.Errorf("error")
+	}
+
+	fmt.Println(result)
+	if len(result) == 0 {
+		posts, err = r.GetFollowingsPosts(userID, start, end)
+		if err != nil {
+			return posts, err
+		}
+		ctx := context.Background()
+		for _, post := range posts {
+			r.rdb.ZAdd(ctx, key, redis.Z{
+				Score:  float64(post.CreatedAt.Unix()),
+				Member: post.ID,
+			})
+		}
+        return posts, nil
+
 	}
 	postIds := []uint{}
 	for _, s := range result {
@@ -168,16 +222,18 @@ func (r *postRepository) GetTimeline(userID uint, start, end int64) (posts []mod
 		}
 		postIds = append(postIds, uint(num))
 	}
-	posts, err = r.GetPostsByIDs(postIds)
-	if err != nil {
-		return posts, err
-	}
-	idOrder := map[uint]int{}
-	for i, id := range postIds {
-		idOrder[id] = i
-	}
-	sort.Slice(posts, func(i, j int)bool{
-		return idOrder[posts[i].ID] < idOrder[posts[j].ID]
-	})
+		fmt.Println("got from redis")
+		posts, err = r.GetPostsByIDs(postIds)
+		if err != nil {
+			return posts, err
+		}
+		idOrder := map[uint]int{}
+		for i, id := range postIds {
+			idOrder[id] = i
+		}
+		sort.Slice(posts, func(i, j int) bool {
+			return idOrder[posts[i].ID] < idOrder[posts[j].ID]
+		})
+	
 	return posts, nil
 }

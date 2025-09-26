@@ -7,6 +7,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+
+// This function checks user's jwt token
 func AuthRequired() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
@@ -17,13 +19,14 @@ func AuthRequired() fiber.Handler {
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader{
+		if tokenString == authHeader {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid authorization header format",
 			})
 		}
 
-		userId, check, err := utils.VerifyJwt(tokenString)
+		// Checking jwt token
+		userID, check, err := utils.VerifyJwt(tokenString)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "invalid token",
@@ -35,7 +38,8 @@ func AuthRequired() fiber.Handler {
 			})
 		}
 
-		c.Locals("user_id", userId)
+		// Add to locals
+		c.Locals("user_id", userID)
 		return c.Next()
 	}
 }
