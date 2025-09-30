@@ -160,7 +160,7 @@ func (r *followRepository) GetFollowers(followingID uint) ([]models.User, error)
 		Joins("JOIN users ON users.id = follows.follower_id").
 		Where("follows.following_id = ?", followingID).
 		Scan(&followers).Error; err != nil {
-		log.Printf("[ERROR] [ERROR]Error getting followers for user %d: %v", followingID, err)
+		log.Printf("[ERROR] Error getting followers for user %d: %v", followingID, err)
 
 		return nil, err
 	}

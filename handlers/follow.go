@@ -65,7 +65,7 @@ func GetFollowing(repo repositories.FollowRepositoryInterface) fiber.Handler {
 
 		following, err := repo.GetFollowings(userID)
 		if err != nil {
-			log.Printf("[ERROR] [ERROR][ERROR] Failed to get followings for user %d: %v", userID, err)
+			log.Printf("[ERROR] Failed to get followings for user %d: %v", userID, err)
 			return c.Status(fiber.StatusBadRequest).JSON(FollowErrorResponse{
 				Error:   "failed to get following",
 				Message: err.Error(),

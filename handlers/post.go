@@ -67,8 +67,9 @@ func PostCreate(repo repositories.PostRepositoryInterface) fiber.Handler {
 			}
 
 		}
-
-		// Check file size
+	
+		if file != nil {
+			// Check file size
 		maxFileSize, err := strconv.ParseUint(os.Getenv("MAX_FILE_SIZE"), 10, 64)
 		if err != nil {
 			// Default file size
@@ -108,14 +109,16 @@ func PostCreate(repo repositories.PostRepositoryInterface) fiber.Handler {
 		}
 		input.MediaPath = path
 
-		if err := utils.BodyParse(c, &input); err != nil {
+
+
+		}
+				if err := utils.BodyParse(c, &input); err != nil {
 			log.Printf("[ERROR] Post creation failed for user %d: %v", userID, err)
 			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 				Error:   "failed to create post",
 				Message: err.Error(),
 			})
 		}
-
 		// Create Post model in db
 		var post = models.Post{
 			Title:     input.Title,
@@ -239,6 +242,7 @@ func DeletePost(repo repositories.PostRepositoryInterface) fiber.Handler {
 
 		// get post from db
 		post, err := repo.GetByID(uint(postIdParams))
+		postMediaPath := post.MediaPath
 		if err != nil {
 			log.Printf("[ERROR] Failed to delete by user %d: %s", userID, err.Error())
 
@@ -258,6 +262,7 @@ func DeletePost(repo repositories.PostRepositoryInterface) fiber.Handler {
 		}
 
 		log.Printf("[INFO] Post deleted successfully post_id=%d by user %d", post.ID, userID)
+		_=	os.Remove(postMediaPath)
 		return c.JSON(PostSuccessfullResponse{
 			Message: "post deleted successfully",
 		})
@@ -375,7 +380,7 @@ func PostEdit(repo repositories.PostRepositoryInterface) fiber.Handler {
 		}
 		log.Printf("[INFO] User %d is editing post_id=%d", userID, post.ID)
 		if err := repo.UpdatePost(post, userID, input); err != nil {
-			log.Printf("[ERROR] [ERROR]Failed to update post_id=%d by user %d: %v", post.ID, userID, err)
+			log.Printf("[ERROR] Failed to update post_id=%d by user %d: %v", post.ID, userID, err)
 
 			return c.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
 				Error:   "failed to update post",

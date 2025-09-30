@@ -176,7 +176,7 @@ func (r *postRepository) DeletePost(post *models.Post, userID uint) error {
 }
 
 func (r *postRepository) GetFollowingsPosts(userID uint, start, end int64) (posts []models.Post, err error) {
-	log.Printf("[ERROR] [INFO] Fetching posts from followings of user %d", userID)
+	log.Printf("[INFO] Fetching posts from followings of user %d", userID)
 
 	followRepo := NewFollowRepository(r.db, r.rdb)
 	followings, err := followRepo.GetFollowings(userID)
